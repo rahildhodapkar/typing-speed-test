@@ -13,7 +13,7 @@ const fetchWords = async () => {
 const generateRandomWords = async () => {
   const wordsData = await fetchWords();
   const words = wordsData.map((wordData) => wordData);
-  return Array.from({ length: 10 }, () => words[Math.floor(Math.random() * words.length)]);
+  return Array.from({ length: 40 }, () => words[Math.floor(Math.random() * words.length)]);
 };
 
 function App() {
@@ -23,6 +23,7 @@ function App() {
   const [timeTaken, setTimeTaken] = useState(null);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [percentageCorrect, setPercentageCorrect] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -44,15 +45,45 @@ function App() {
   }, [startTime, timeTaken]);
 
   const handleChange = (e) => {
-    setInput(e.target.value);
+    const targetInput = e.target.value;
 
-    if (!startTime) {
-      setStartTime(Date.now());
+    // Limit input length to the total number of characters in the target words
+    if (targetInput.length <= words.join(' ').length) {
+      setInput(targetInput);
+
+      if (!startTime) {
+        setStartTime(Date.now());
+      }
+
+      if (targetInput.length === words.join(' ').length) {
+        setTimeTaken((Date.now() - startTime) / 1000);
+        calculateCorrectPercentage(targetInput);
+      }
+    }
+  };
+
+  const calculateCorrectPercentage = (typedInput) => {
+    const targetWords = words.join(' ');
+    let correctCharacters = 0;
+
+    for (let i = 0; i < typedInput.length; i++) {
+      if (typedInput[i] === targetWords[i]) {
+        correctCharacters++;
+      }
     }
 
-    if (e.target.value.trim() === words.join(' ')) {
-      setTimeTaken((Date.now() - startTime) / 1000);
-    }
+    setPercentageCorrect((correctCharacters / typedInput.length) * 100);
+  };
+
+  const handleNewTest = async () => {
+    setLoading(true);
+    setInput('');
+    setStartTime(null);
+    setTimeTaken(null);
+    setTimer(0);
+    setPercentageCorrect(null);
+    setWords(await generateRandomWords());
+    setLoading(false);
   };
 
   return (
@@ -76,12 +107,22 @@ function App() {
             cols={50}
           />
           {timeTaken ? (
-            <p>
-              Congratulations! You finished in {timeTaken.toFixed(2)} seconds.
-            </p>
-          ) : (
+            <div>
+              <p>
+                Finished! It took {timeTaken.toFixed(2)} seconds.
+              </p>
+              <p>
+                Correctness : {percentageCorrect.toFixed(2)}%
+              </p>
+            </div>
+          ) : startTime ? (
             <p>Time elapsed: {timer} seconds</p>
+          ) : (
+            <p>Start typing to begin the test.</p>
           )}
+          <button onClick={handleNewTest} disabled={!timeTaken}>
+            New Test
+          </button>
         </>
       )}
     </div>
@@ -89,3 +130,4 @@ function App() {
 }
 
 export default App;
+
